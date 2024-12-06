@@ -211,7 +211,8 @@ sleep 4
 echo "Vamos configurar sua Evolution API?"
 read -p "Pressione Enter para configurar..."
 
-nano ~/.env
+cd ~/Projetos/evolution-api
+nano ./.env
 check_command "Configuração do arquivo .env"
 
 # Pausa de 4 segundos
