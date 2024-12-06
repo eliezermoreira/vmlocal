@@ -1,229 +1,378 @@
 #!/bin/bash
 
-# Configuração inicial
-echo "Configurando fuso horário para America/Sao_Paulo..."
-sudo timedatectl set-timezone America/Sao_Paulo
+# Caminho para o arquivo de controle
+CONTROL_FILE="/tmp/script_status"
 
-echo "Atualizando pacotes..."
-sudo apt update
+# Caminho do arquivo de serviço systemd
+SERVICE_FILE="/etc/systemd/system/config-script.service"
 
-echo "Aplicando upgrades..."
-sudo apt upgrade -y
+# Função para verificar o progresso do script
+check_progress() {
+    if [ -f "$CONTROL_FILE" ]; then
+        STEP=$(cat "$CONTROL_FILE")
+    else
+        STEP=0
+    fi
+}
 
-# Instalação de pacotes necessários
-echo "Instalando pacotes necessários..."
-sudo apt install -y curl wget git vim build-essential
+# Função para salvar o progresso
+save_progress() {
+    echo $1 > "$CONTROL_FILE"
+}
 
-# Instalação do Glances
-echo "Instalando o Glances para monitoramento do sistema..."
-sudo apt install -y glances
+# Função para configurar reinício automático
+configure_autorun() {
+    echo "Configurando o serviço para reinício automático após reboot..."
+    sudo bash -c "cat > $SERVICE_FILE" <<EOF
+[Unit]
+Description=Configuração Prime Stream
+After=network.target
 
-# Configuração do túnel Cloudflare
-echo "Criando túnel Cloudflare..."
+[Service]
+ExecStart=/bin/bash $0
+Restart=on-failure
+User=$(whoami)
 
-read -p "Deseja atualizar o comando do Cloudflare Tunnel? (s/n): " update_command
-if [[ "$update_command" == "s" || "$update_command" == "S" ]]; then
-    read -p "Insira o novo comando completo: " cloudflare_command
-else
-    cloudflare_command="curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && sudo dpkg -i cloudflared.deb && sudo cloudflared service install eyJhIjoiZjMwNjRjN2NiOTcxMDIwNmIwOTcyZDljYWU2NGViMWYiLCJ0IjoiYTZkYjM5ZTMtMzJmMi00YzEwLTkxN2UtN2U5ZWJkNzZkNzBkIiwicyI6Ik1tUTVNRFUwWm1VdE1tRXlaUzAwWVRVeExUbG1NekF0TURObU1XSmhZMlJtTXpjMSJ9"
-fi
-
-echo "Executando o comando do Cloudflare Tunnel..."
-eval $cloudflare_command
-
-echo "Túnel Cloudflare configurado com sucesso!"
-
-# Instalação do PostgreSQL
-echo "Instalando o PostgreSQL..."
-sudo apt-get update
-sudo apt-get install -y postgresql postgresql-contrib
-
-echo "Iniciando o serviço do PostgreSQL..."
-sudo service postgresql start
-
-# Configuração do PostgreSQL
-echo "Configurando o PostgreSQL..."
-
-# Criação de usuários, privilégios e bancos de dados
-sudo -u postgres psql <<EOF
--- Configurações para Evolution
-CREATE USER evolutionv2 WITH PASSWORD '142536';
-ALTER USER evolutionv2 WITH SUPERUSER;
-ALTER USER evolutionv2 CREATEDB;
-CREATE DATABASE evolutionv2;
-
--- Configurações para n8n
-CREATE USER n8n_users WITH PASSWORD '142536';
-ALTER USER n8n_users WITH SUPERUSER;
-ALTER USER n8n_users CREATEDB;
-CREATE DATABASE n8n_usersdb;
+[Install]
+WantedBy=default.target
 EOF
 
-echo "Configuração do PostgreSQL concluída!"
+    echo "Ativando o serviço no systemd..."
+    sudo systemctl enable config-script.service
+    echo "Serviço configurado com sucesso!"
+}
 
-# Instalação do Redis
-echo "Instalando o Redis..."
-sudo apt-get install -y redis-server
+# Função para remover o reinício automático
+remove_autorun() {
+    echo "Removendo configuração de reinício automático..."
+    if [ -f "$SERVICE_FILE" ]; then
+        sudo systemctl disable config-script.service
+        sudo rm -f "$SERVICE_FILE"
+        echo "Configuração de reinício automático removida!"
+    else
+        echo "Nenhuma configuração de reinício automático encontrada."
+    fi
+}
 
-echo "Iniciando o serviço do Redis..."
-sudo service redis-server start
+# Função para pausa entre as etapas
+pause_script() {
+    echo -e "\033[1;33mAguarde 4 segundos...\033[0m"
+    sleep 4
+}
 
-# Verificando o status do Redis
-echo "Verificando o status do Redis..."
-if redis-cli ping | grep -q "PONG"; then
-    echo "Redis está rodando corretamente!"
-else
-    echo "Houve um problema ao iniciar o Redis. Verifique as configurações."
+# Função para verificação de sucesso de comando
+check_command() {
+    if [ $? -ne 0 ]; then
+        echo "Erro ao executar o comando. Abortando o script." >&2
+        exit 1
+    fi
+}
+
+# Limpar a tela
+clear
+echo -e "\033[1;32m"
+echo "############# +PRIME STREAM ACADEMY+ #################"
+echo "# Bem-vindo ao script de configuração!    #"
+echo "# Este script irá configurar sua máquina  #"
+echo "# com os pacotes necessários e serviços! #"
+echo "###########################################"
+echo -e "\033[0m"
+echo ""
+
+# Iniciar o processo de verificação de progresso
+check_progress
+
+# Controle de Pausa para Etapa 1
+if [ $STEP -lt 1 ]; then
+    # Primeira etapa: Configuração inicial
+    echo "Configurando fuso horário para America/Sao_Paulo..."
+    sudo timedatectl set-timezone America/Sao_Paulo
+    check_command
+
+    echo "Atualizando pacotes..."
+    sudo apt update
+    check_command
+
+    echo "Aplicando upgrades..."
+    sudo apt upgrade -y
+    check_command
+
+    # Salvar progresso
+    save_progress 1
+    pause_script
 fi
 
-# Instalação do NVM e Node.js
-echo "Instalando o NVM (Node Version Manager)..."
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+# Controle de Pausa para Etapa 2
+if [ $STEP -lt 2 ]; then
+    # Segunda etapa: Instalação de pacotes necessários
+    echo -e "\033[1;34mInstalando pacotes necessários... Aguarde...\033[0m"
+    sudo apt install -y curl wget git vim build-essential
+    check_command
 
-echo "Carregando o NVM no ambiente atual..."
-source ~/.bashrc
-
-echo "Instalando o Node.js v22.12.0..."
-nvm install v22.12.0 && nvm use v22.12.0
-
-echo "Node.js v22.12.0 instalado e em uso!"
-
-# Clone do repositório da Evolution API v2
-echo "Clonando o repositório Evolution API v2..."
-
-# Criar o diretório 'Projetos' caso não exista
-mkdir -p ~/Projetos
-
-# Clonando o repositório na branch 'develop'
-git clone -b develop https://github.com/EvolutionAPI/evolution-api.git ~/Projetos/evolution-api
-
-echo "Repositório clonado em: ~/Projetos/evolution-api"
-
-# Acesse o diretório do projeto e instale as dependências
-echo "Acessando o diretório do projeto e instalando dependências..."
-
-cd ~/Projetos/evolution-api
-npm install --force
-
-echo "Dependências instaladas com sucesso!"
-
-# Copiar o arquivo .env.example para .env
-echo "Configurando variáveis de ambiente..."
-
-cp ./.env.example ./.env
-
-echo "Arquivo .env configurado com sucesso!"
-
-# Configuração do arquivo .env
-echo "Bem-vindo à configuração do arquivo .env! Vamos configurar as variáveis."
-
-# Solicitar o IP local
-echo "Por favor, insira o IP local da sua máquina (exemplo: 192.168.0.10):"
-read SERVER_IP
-SERVER_URL="http://$SERVER_IP:8080"
-echo "SERVER_URL=$SERVER_URL" >> .env
-echo "SERVER_URL configurado para: $SERVER_URL"
-
-# Solicitar o usuário e senha do banco de dados
-echo "Por favor, insira o nome de usuário do banco de dados (exemplo: evolutionv2):"
-read DB_USER
-echo "Por favor, insira a senha do banco de dados (exemplo: 142536):"
-read DB_PASS
-echo "Por favor, insira o IP local para o banco de dados (exemplo: 192.168.0.10):"
-read DB_HOST
-DATABASE_CONNECTION_URI="postgresql://$DB_USER:$DB_PASS@$DB_HOST:5432/evolution?schema=public"
-echo "DATABASE_CONNECTION_URI=$DATABASE_CONNECTION_URI" >> .env
-echo "DATABASE_CONNECTION_URI configurado para: $DATABASE_CONNECTION_URI"
-
-# Solicitar o nome do cliente de conexão do banco de dados
-echo "Por favor, insira o nome do cliente de conexão (exemplo: Evolution API):"
-read DB_CLIENT_NAME
-echo "DATABASE_CONNECTION_CLIENT_NAME=$DB_CLIENT_NAME" >> .env
-echo "DATABASE_CONNECTION_CLIENT_NAME configurado para: $DB_CLIENT_NAME"
-
-# Ativar webhook global
-echo "Deseja ativar o webhook global? (true/false)"
-read WEBHOOK_GLOBAL_ENABLED
-WEBHOOK_GLOBAL_ENABLED=${WEBHOOK_GLOBAL_ENABLED:-true}  # Caso não insira nada, o valor padrão será "true"
-echo "WEBHOOK_GLOBAL_ENABLED=$WEBHOOK_GLOBAL_ENABLED" >> .env
-echo "WEBHOOK_GLOBAL_ENABLED configurado para: $WEBHOOK_GLOBAL_ENABLED"
-
-# Ativar webhook por eventos
-echo "Deseja ativar o webhook por eventos? (true/false)"
-read WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS
-WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=${WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS:-true}  # Caso não insira nada, o valor padrão será "true"
-echo "WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=$WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS" >> .env
-echo "WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS configurado para: $WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS"
-
-# Solicitar a chave de autenticação
-echo "Por favor, insira a chave de autenticação (pode gerar uma chave no site https://www.lastpass.com/pt/features/password-generator):"
-read AUTHENTICATION_API_KEY
-echo "AUTHENTICATION_API_KEY=$AUTHENTICATION_API_KEY" >> .env
-echo "AUTHENTICATION_API_KEY configurado para: $AUTHENTICATION_API_KEY"
-
-# Definir idioma
-echo "Deseja definir o idioma como pt_BR? (digite 'sim' ou 'não')"
-read LANGUAGE_INPUT
-if [ "$LANGUAGE_INPUT" == "sim" ]; then
-    LANGUAGE="pt_BR"
-else
-    LANGUAGE="em"
-fi
-echo "LANGUAGE=$LANGUAGE" >> .env
-echo "LANGUAGE configurado para: $LANGUAGE"
-
-# Menu de revisão do .env
-echo "A configuração do arquivo .env foi concluída. Pressione Ctrl + X para sair e salvar."
-echo "Lembre-se de verificar o arquivo .env para garantir que tudo foi configurado corretamente."
-
-# Perguntar se deseja revisar o arquivo .env
-read -p "Deseja revisar o arquivo .env antes de continuar? (S/n): " review_choice
-
-if [[ "$review_choice" == "S" || "$review_choice" == "s" ]]; then
-    # Abrir o arquivo .env para revisão
-    nano .env
+    # Salvar progresso
+    save_progress 2
+    pause_script
 fi
 
-# Após revisar e fechar o .env, gerar os arquivos do cliente Prisma
-echo "Gerando os arquivos do cliente Prisma..."
-npm run db:generate
+# Controle de Pausa para Etapa 3
+if [ $STEP -lt 3 ]; then
+    # Terceira etapa: Instalação do Glances
+    echo "Instalando o Glances para monitoramento do sistema..."
+    sudo apt install -y glances
+    check_command
 
-echo "Arquivos do cliente Prisma gerados com sucesso!"
-
-# Realizar o deploy das migrations:
-echo "Realizando o deploy das migrations..."
-npm run db:deploy
-
-echo "Deploy das migrations realizado com sucesso!"
-
-# Após a configuração, você pode iniciar a Evolution API com o seguinte comando:
-echo "Construindo a Evolution API..."
-npm run build
-
-echo "Evolution API construída com sucesso!"
-
-# Instalar PM2 para gerenciar o processo da API
-echo "Instalando o PM2..."
-npm install pm2 -g
-
-# Iniciar a Evolution API com PM2
-echo "Iniciando a Evolution API com PM2..."
-pm2 start dist/main.js --name evolution-api
-
-echo "Evolution API iniciada com PM2 com o nome 'evolution-api'."
-
-# Perguntar sobre alocação de memória para o n8n
-quantidade_ram=$(free -h | grep Mem | awk '{print $2}')
-echo "Sua VM tem cerca de $quantidade_ram de memória RAM disponível."
-
-read -p "Deseja atribuir mais memória para o n8n? (S/n): " atribuir_memoria
-if [[ "$atribuir_memoria" == "S" || "$atribuir_memoria" == "s" ]]; then
-    read -p "Quanto deseja atribuir para o n8n? (Exemplo: 2G, 512M, etc.): " memoria_alocada
-    # Ajustar a configuração do PM2 para alocar mais memória para o n8n
-    pm2 start n8n --name n8n --max-memory-restart $memoria_alocada
-    echo "Memória alocada para o n8n foi ajustada para $memoria_alocada."
-else
-    echo "A memória não foi alterada para o n8n."
+    # Salvar progresso
+    save_progress 3
+    pause_script
 fi
 
-echo "Processo concluído!"
+# Controle de Pausa para Etapa 4
+if [ $STEP -lt 4 ]; then
+    # Quarta etapa: Configuração do túnel Cloudflare
+    echo "Criando túnel Cloudflare..."
+
+    read -p "Deseja atualizar o comando do Cloudflare Tunnel? (s/n): " update_command
+    if [[ "$update_command" == "s" || "$update_command" == "S" ]]; then
+        read -p "Insira o novo comando completo: " cloudflare_command
+    else
+        cloudflare_command="curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && sudo dpkg -i cloudflared.deb && sudo cloudflared service install eyJhIjoiZjMwNjRjN2NiOTcxMDIwNmIwOTcyZDljYWU2NGViMWYiLCJ0IjoiYTZkYjM5ZTMtMzJmMi00YzEwLTkxN2UtN2U5ZWJkNzZkNzBkIiwicyI6Ik1tUTVNRFUwWm1VdE1tRXlaUzAwWVRVeExUbG1NekF0TURObU1XSmhZMlJtTXpjMSJ9"
+    fi
+
+    # Validação do comando
+    if ! eval $cloudflare_command; then
+        echo "Erro ao executar o comando do Cloudflare Tunnel. Verifique e tente novamente." >&2
+        exit 1
+    fi
+
+    echo "Túnel Cloudflare configurado com sucesso!"
+
+    # Salvar progresso
+    save_progress 4
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 5
+if [ $STEP -lt 5 ]; then
+    # Quinta etapa: Instalação do PostgreSQL
+    echo "Instalando o PostgreSQL..."
+    sudo apt-get update
+    check_command
+    sudo apt-get install -y postgresql postgresql-contrib
+    check_command
+
+    echo "Iniciando o serviço do PostgreSQL..."
+    sudo service postgresql start
+    check_command
+
+    # Salvar progresso
+    save_progress 5
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 6
+if [ $STEP -lt 6 ]; then
+    # Sexta etapa: Configuração do PostgreSQL
+    echo "Configurando o PostgreSQL..."
+
+    sudo -u postgres psql <<EOF
+    -- Configurações para Evolution
+    CREATE USER evolutionv2 WITH PASSWORD '142536';
+    ALTER USER evolutionv2 WITH SUPERUSER;
+    ALTER USER evolutionv2 CREATEDB;
+    CREATE DATABASE evolutionv2;
+
+    -- Configurações para n8n
+    CREATE USER n8n_users WITH PASSWORD '142536';
+    ALTER USER n8n_users WITH SUPERUSER;
+    ALTER USER n8n_users CREATEDB;
+    CREATE DATABASE n8n_usersdb;
+EOF
+    check_command
+
+    # Salvar progresso
+    save_progress 6
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 7
+if [ $STEP -lt 7 ]; then
+    # Sétima etapa: Instalação do Redis
+    echo "Instalando o Redis..."
+    sudo apt-get install -y redis-server
+    check_command
+
+    echo "Iniciando o serviço do Redis..."
+    sudo service redis-server start
+    check_command
+
+    echo "Verificando o status do Redis..."
+    if redis-cli ping | grep -q "PONG"; then
+        echo "Redis está rodando corretamente!"
+    else
+        echo "Houve um problema ao iniciar o Redis. Verifique as configurações."
+    fi
+
+    # Salvar progresso
+    save_progress 7
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 8
+if [ $STEP -lt 8 ]; then
+    # Oitava etapa: Instalação do NVM e Node.js
+    echo "Instalando o NVM (Node Version Manager)..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    check_command
+
+    echo "Carregando o NVM no ambiente atual..."
+    source ~/.bashrc
+    check_command
+
+    echo "Instalando o Node.js v22.12.0..."
+    nvm install v22.12.0 && nvm use v22.12.0
+    check_command
+
+    echo "Node.js v22.12.0 instalado e em uso!"
+
+    # Salvar progresso
+    save_progress 8
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 9
+if [ $STEP -lt 9 ]; then
+    # Nona etapa: Clone do repositório da Evolution API v2
+    echo "Clonando o repositório Evolution API v2..."
+
+    # Criar o diretório 'Projetos' caso não exista
+    mkdir -p ~/Projetos
+    git clone -b develop https://github.com/EvolutionAPI/evolution-api.git ~/Projetos/evolution-api
+    check_command
+
+    echo "Repositório clonado em: ~/Projetos/evolution-api"
+
+    echo "Acessando o diretório do projeto e instalando dependências..."
+    cd ~/Projetos/evolution-api
+    npm install --force
+    check_command
+
+    # Salvar progresso
+    save_progress 9
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 10
+if [ $STEP -lt 10 ]; then
+    # Décima etapa: Configuração do ambiente .env
+    echo "Configurando o arquivo .env para Evolution API..."
+    nano ./.env
+    check_command
+
+    # Salvar progresso
+    save_progress 10
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 11
+if [ $STEP -lt 11 ]; then
+    # Décima primeira etapa: Gerar arquivos do cliente Prisma
+    echo "Gerando arquivos do cliente Prisma..."
+    npm run db:generate
+    check_command
+
+    # Salvar progresso
+    save_progress 11
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 12
+if [ $STEP -lt 12 ]; then
+    # Décima segunda etapa: Deploy das migrations
+    echo "Realizando o deploy das migrations..."
+    npm run db:deploy
+    check_command
+
+    # Salvar progresso
+    save_progress 12
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 13
+if [ $STEP -lt 13 ]; then
+    # Décima terceira etapa: Gerenciar a API com PM2
+    echo "Instalando o PM2..."
+    npm install pm2 -g
+    check_command
+
+    if ! pm2 list | grep -q ApiEvolution; then
+        pm2 start 'npm run start:prod' --name ApiEvolution
+        pm2 save
+    fi
+
+    # Salvar progresso
+    save_progress 13
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 14
+if [ $STEP -lt 14 ]; then
+    # Décima quarta etapa: Instalar o n8n
+    echo "Instalando o n8n..."
+    cd ~
+    npm install n8n -g
+    check_command
+
+    pm2 start n8n
+    pm2 startup
+    pm2 save --force
+
+    # Salvar progresso
+    save_progress 14
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 15
+if [ $STEP -lt 15 ]; then
+    # Décima quinta etapa: Alocação de memória para o n8n
+    quantidade_ram=$(free -h | grep Mem | awk '{print $2}')
+    echo "Sua VM tem cerca de $quantidade_ram de memória RAM disponível."
+
+    read -p "Deseja atribuir mais memória para o n8n? (S/n): " atribuir_memoria
+    if [[ "$atribuir_memoria" == "S" || "$atribuir_memoria" == "s" ]]; then
+        read -p "Quanto deseja atribuir para o n8n? (Exemplo: 2G, 512M, etc.): " memoria_alocada
+        # Ajustar a configuração do PM2 para alocar mais memória para o n8n
+        pm2 start n8n --name n8n --max-memory-restart $memoria_alocada
+        echo "Memória alocada para o n8n foi ajustada para $memoria_alocada."
+    else
+        echo "A memória não foi alterada para o n8n."
+    fi
+
+    # Salvar progresso
+    save_progress 15
+    pause_script
+fi
+
+# Controle de Pausa para Etapa 16
+if [ $STEP -lt 16 ]; then
+    # Décima sexta etapa: Instalação e inicialização do MinIO
+    echo "Baixando e instalando o MinIO..."
+    wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20241107005220.0.0_amd64.deb -O minio.deb
+    sudo dpkg -i minio.deb
+    check_command
+
+    # Iniciar MinIO
+    mkdir ~/minio
+    minio server ~/minio --console-address :9001
+    check_command
+
+    # Gerenciar o MinIO com PM2
+    pm2 start /usr/local/bin/minio -- server ~/minio --console-address ":9001"
+    check_command
+
+    # Salvar progresso
+    save_progress 16
+    pause_script
+fi
+
+# Fim do script
+echo -e "\033[1;32mScript concluído com sucesso! Tudo pronto para iniciar!\033[0m"
