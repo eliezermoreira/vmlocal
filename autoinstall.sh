@@ -237,6 +237,15 @@ check_command "Deploy das migrations"
 # Pausa de 4 segundos
 sleep 4
 
+# Etapa 13A: Fazer o build da Evolution API
+echo "Buildando a Evolution API..."
+cd ~/Projetos/evolution-api
+npm run build
+check_command "Deploy do build"
+
+# Pausa de 4 segundos
+sleep 4
+
 # Etapa 14: Configuração do PM2
 echo "Instalando o PM2..."
 npm install pm2 -g
