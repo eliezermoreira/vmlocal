@@ -65,7 +65,7 @@ check_command() {
 # Limpar a tela
 clear
 echo -e "\033[1;32m"
-echo "############# +PRIME STREAM ACADEMY+ #################"
+echo "######## +PRIME STREAM ACADEMY+ ###########"
 echo "# Bem-vindo ao script de configuração!    #"
 echo "# Este script irá configurar sua máquina  #"
 echo "# com os pacotes necessários e serviços! #"
@@ -212,6 +212,7 @@ echo "Vamos configurar sua Evolution API?"
 read -p "Pressione Enter para configurar..."
 
 cd ~/Projetos/evolution-api
+cp ./.env.example ./.env
 nano ./.env
 check_command "Configuração do arquivo .env"
 
@@ -220,6 +221,7 @@ sleep 4
 
 # Etapa 12: Gerar arquivos do Prisma
 echo "Gerando arquivos do Prisma..."
+cd ~/Projetos/evolution-api
 npm run db:generate
 check_command "Geração dos arquivos do Prisma"
 
@@ -228,6 +230,7 @@ sleep 4
 
 # Etapa 13: Deploy das migrations
 echo "Realizando o deploy das migrations..."
+cd ~/Projetos/evolution-api
 npm run db:deploy
 check_command "Deploy das migrations"
 
@@ -240,6 +243,7 @@ npm install pm2 -g
 check_command "Instalação do PM2"
 
 echo "Iniciando a API com PM2..."
+cd ~/Projetos/evolution-api
 pm2 start 'npm run start:prod' --name ApiEvolution
 pm2 save
 check_command "Configuração do PM2 para a API"
@@ -249,6 +253,7 @@ sleep 4
 
 # Etapa 15: Instalação do n8n
 echo "Instalando o n8n..."
+cd /
 npm install n8n -g
 check_command "Instalação do n8n"
 
@@ -263,6 +268,7 @@ sleep 4
 
 # Etapa 16: Instalação do MinIO
 echo "Instalando o MinIO..."
+cd /
 wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20241107005220.0.0_amd64.deb -O minio.deb
 sudo dpkg -i minio.deb
 check_command "Instalação do MinIO"
