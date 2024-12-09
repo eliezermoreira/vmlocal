@@ -318,7 +318,7 @@ sleep 4
 # Etapa 15: Instalação do n8n
 echo "Instalando o n8n..."
 cd /
-npm install n8n -g n8n@1.66.0
+npm install n8n -g
 check_command "Instalação do n8n"
 
 echo "Iniciando o n8n com PM2..."
