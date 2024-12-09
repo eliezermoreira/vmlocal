@@ -337,13 +337,19 @@ wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_2024110700
 sudo dpkg -i minio.deb
 check_command "Instalação do MinIO"
 
-echo "Iniciando o MinIO..."
-mkdir ~/minio
-minio server ~/minio --console-address :9001
-check_command "Início do servidor MinIO"
-
 echo "Iniciando o MinIO com PM2..."
 pm2 start /usr/local/bin/minio -- server ~/minio --console-address ":9001"
 check_command "Configuração do MinIO com PM2"
+
+# Pausa de 4 segundos
+sleep 4
+
+# Etapa 16: Instalação do MinIO
+echo "Reboot final"
+
+# Pausa de 4 segundos
+sleep 4
+
+reboot -n
 
 echo "Script concluído com sucesso!"
