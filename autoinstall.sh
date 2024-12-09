@@ -212,7 +212,7 @@ echo "Vamos configurar sua Evolution API?"
 read -p "Pressione Enter para configurar..."
 
 cd ~/Projetos/evolution-api
-cp ./.env.example ./.env
+curl -O https://raw.githubusercontent.com/eliezermoreira/vmlocal/main/.env
 nano ./.env
 check_command "Configuração do arquivo .env"
 
