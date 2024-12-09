@@ -190,7 +190,7 @@ sleep 4
 # Etapa 9: Clone do repositório da Evolution API v2
 echo "Clonando o repositório Evolution API v2..."
 mkdir -p ~/Projetos
-git clone -b develop https://github.com/EvolutionAPI/evolution-api.git ~/Projetos/evolution-api
+git clone -b main https://github.com/EvolutionAPI/evolution-api.git ~/Projetos/evolution-api
 check_command "Clone do repositório Evolution API v2"
 
 echo "Repositório clonado em: ~/Projetos/evolution-api"
