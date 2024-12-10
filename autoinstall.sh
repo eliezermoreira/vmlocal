@@ -351,15 +351,39 @@ sleep 4
 echo "Instalando o MinIO..."
 cd /
 wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20241107005220.0.0_amd64.deb -O minio.deb
+
+# Verificando se o download foi bem-sucedido
+if [ ! -f "minio.deb" ]; then
+    echo "Falha no download do MinIO. Verifique a URL e tente novamente."
+    exit 1
+fi
+
+# Instalando o MinIO
 sudo dpkg -i minio.deb
+
+# Verificando se a instalação foi bem-sucedida
+if [ $? -ne 0 ]; then
+    echo "Erro na instalação do MinIO."
+    exit 1
+fi
+
+# Confirmando que a instalação foi concluída
 check_command "Instalação do MinIO"
 
 echo "Iniciando o MinIO com PM2..."
+
+# Aguardando a instalação para garantir que o MinIO foi instalado corretamente
+if ! command -v minio &> /dev/null; then
+    echo "MinIO não foi instalado corretamente. Verifique os logs de instalação."
+    exit 1
+fi
+
+# Iniciando o MinIO com PM2
 pm2 start /usr/local/bin/minio -- server ~/minio --console-address ":9001"
+
+# Verificando se o PM2 iniciou corretamente
 check_command "Configuração do MinIO com PM2"
 
-# Pausa de 4 segundos
-sleep 4
 
 # Etapa 16: Instalação do MinIO
 echo "Reboot final"
