@@ -326,7 +326,14 @@ check_command "Instalação do PM2"
 echo "Iniciando a API com PM2..."
 cd ~/Projetos/evolution-api
 pm2 start 'npm run start:prod' --name ApiEvolution
-pm2 save
+
+# Pausa de 4 segundos
+sleep 4
+
+pm2 stop all
+pm2 start ApiEvolution --node-args="--max-old-space-size=3072"
+pm2 startup
+pm2 save --force
 check_command "Configuração do PM2 para a API"
 
 # Pausa de 4 segundos
@@ -339,7 +346,7 @@ npm install n8n -g
 check_command "Instalação do n8n"
 
 echo "Iniciando o n8n com PM2..."
-pm2 start n8n
+pm2 start n8n --node-args="--max-old-space-size=3072"
 pm2 startup
 pm2 save --force
 check_command "Configuração do PM2 para o n8n"
@@ -384,6 +391,8 @@ pm2 start /usr/local/bin/minio -- server ~/minio --console-address ":9001"
 # Verificando se o PM2 iniciou corretamente
 check_command "Configuração do MinIO com PM2"
 
+# Pausa de 4 segundos
+sleep 4
 
 # Etapa 16: Instalação do MinIO
 echo "Reboot final"
