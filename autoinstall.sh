@@ -147,6 +147,23 @@ CREATE USER n8n_users WITH PASSWORD '142536';
 ALTER USER n8n_users WITH SUPERUSER;
 ALTER USER n8n_users CREATEDB;
 CREATE DATABASE n8n_usersdb;
+
+\c n8n_usersdb;
+CREATE TABLE contatos (
+    id SERIAL PRIMARY KEY,                   -- Chave primária única e sequencial
+    remoteJid VARCHAR(255) NOT NULL,         -- Identificador remoto obrigatório
+    fullCode VARCHAR(20) NOT NULL,           -- Código obrigatório com limite de 20 caracteres
+    nome VARCHAR(255),                       -- Nome do contato
+    numero_telefone VARCHAR(20),             -- Número de telefone
+    assinou BOOLEAN DEFAULT FALSE,           -- Indica se assinou, padrão é falso
+    solicitou_teste BOOLEAN DEFAULT FALSE,   -- Indica se solicitou teste, padrão é falso
+    data_adesao DATE,                        -- Data de adesão
+    data_renovacao DATE,                     -- Data de renovação
+    data_vencimento DATE,                    -- Data de vencimento
+    login VARCHAR(255),                      -- Login associado
+    senha VARCHAR(255),                      -- Senha associada
+    CONSTRAINT unique_remoteJid_fullCode UNIQUE (remoteJid, fullCode) -- Restrições únicas combinadas
+);
 EOF
 check_command "Configuração do PostgreSQL"
 
